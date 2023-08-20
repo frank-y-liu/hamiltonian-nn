@@ -19,6 +19,9 @@ def get_args():
     parser.add_argument('--input_dim', default=2, type=int, help='dimensionality of input tensor')
     parser.add_argument('--hidden_dim', default=200, type=int, help='hidden dimension of mlp')
     parser.add_argument('--learn_rate', default=1e-3, type=float, help='learning rate')
+    parser.add_argument('--lambda1', default=0.0, type=float, help='value of lambda')
+    parser.add_argument('--k',default=1.0, type=float, help='value of k, default=1')
+    parser.add_argument('--m', default=1.0, type=float, help='value of M, default=1')
     parser.add_argument('--nonlinearity', default='tanh', type=str, help='neural net nonlinearity')
     parser.add_argument('--total_steps', default=2000, type=int, help='number of gradient steps')
     parser.add_argument('--print_every', default=200, type=int, help='number of gradient steps between prints')
@@ -61,6 +64,12 @@ def train(args):
     # train step
     dxdt_hat = model.rk4_time_derivative(x) if args.use_rk4 else model.time_derivative(x)
     loss = L2_loss(dxdt, dxdt_hat)
+    if args.lambda1 > 0.0:
+      mval=args.m
+      kval=args.k
+      loss2 = args.lambda1 * L2_loss( dxdt_hat[:,0] - x[:,1]/mval + dxdt_hat[:,1] + kval*x[:,0], 0)
+      # loss2 = args.lambda1 * L2_loss(dxdt_hat[:,0], x[:,1]) + args.lambda1*L2_loss(dxdt_hat[:,1], -x[:,0])
+      loss = loss + loss2
     loss.backward() ; optim.step() ; optim.zero_grad()
     
     # run test data

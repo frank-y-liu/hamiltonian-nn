@@ -21,6 +21,9 @@ def get_args():
     parser.add_argument('--learn_rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--nonlinearity', default='tanh', type=str, help='neural net nonlinearity')
     parser.add_argument('--total_steps', default=2000, type=int, help='number of gradient steps')
+    parser.add_argument('--lambda1', default=0.0, type=float,help='Value of lambda, default=1.0')
+    parser.add_argument('--g',default=2.4, type=float, help='Value of g, default=2.4')
+    parser.add_argument('--m', default=0.5, type=float, help='Value of m, default=0.5')
     parser.add_argument('--print_every', default=200, type=int, help='number of gradient steps between prints')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='verbose?')
     parser.add_argument('--name', default='real', type=str, help='name of the task')
@@ -60,6 +63,12 @@ def train(args):
     # train step
     dxdt_hat = model.rk4_time_derivative(x, dt=1/6.) if args.use_rk4 else model.time_derivative(x)
     loss = L2_loss(dxdt, dxdt_hat)
+    if args.lambda1>0.0:
+       gval=args.g
+       mval=args.m
+       loss2 = L2_loss(dxdt_hat[:,0]-x[:,1]/mval + dxdt_hat[:,1]+2*mval*gval*torch.sin(x[:,0]),0)
+       loss = loss + args.lambda1*loss2
+       
     loss.backward() ; optim.step() ; optim.zero_grad()
 
     # run validation

@@ -2,7 +2,7 @@
 # Sam Greydanus, Misko Dzamba, Jason Yosinski
 
 import torch, argparse
-import numpy as np
+import autograd.numpy as np
 
 import os, sys
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +22,10 @@ def get_args():
     parser.add_argument('--nonlinearity', default='tanh', type=str, help='neural net nonlinearity')
     parser.add_argument('--total_steps', default=2000, type=int, help='number of gradient steps')
     parser.add_argument('--print_every', default=200, type=int, help='number of gradient steps between prints')
+    parser.add_argument('--lambda1', default=0.0, type=float, help='Value of lambda, default=1.0')
+    parser.add_argument('--l', default=1.0, type=float, help='Value of L, default=1.0')
+    parser.add_argument('--m', default=0.5, type=float, help='Value of M, default=0.5')
+    parser.add_argument('--g', default=3.0, type=float, help='Value of g, default=3.0')
     parser.add_argument('--name', default='pend', type=str, help='only one option right now')
     parser.add_argument('--baseline', dest='baseline', action='store_true', help='run baseline or experiment?')
     parser.add_argument('--use_rk4', dest='use_rk4', action='store_true', help='integrate derivative with RK4')
@@ -61,6 +65,13 @@ def train(args):
     # train step
     dxdt_hat = model.rk4_time_derivative(x) if args.use_rk4 else model.time_derivative(x)
     loss = L2_loss(dxdt, dxdt_hat)
+    if args.lambda1 > 0.0:
+       lval=args.l
+       mval=args.m
+       gval=args.g
+       loss2 = L2_loss(dxdt_hat[:,0]-lval*lval*x[:,1]/mval + dxdt_hat[:,1]+2.*mval*gval*lval*torch.sin(x[:,0]),0)
+       loss = loss + args.lambda1*loss2
+
     loss.backward() ; optim.step() ; optim.zero_grad()
     
     # run test data
